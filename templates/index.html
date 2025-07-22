@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Welcome - Quiz Whiz</title>
+
+  
+
+  <style>
+    /* Full reset */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow-x: hidden; /* prevent horizontal scroll */
+    }
+
+    body, #app {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    #app > div {
+      flex: 1;
+    }
+
+    .auth-page{
+        background-image: url("/static/Images/allpagebg.jpg");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        height: 100vh;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    .hero-section {
+      background-image: url("/static/Images/background_image.jpg");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      min-height: 100vh;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      z-index: 0;
+    }
+
+    .hero-title {
+      font-size: 3rem;
+      font-weight: bold;
+      color: #000;
+    }
+
+    footer {
+      position: relative;
+      z-index: 1;
+      background: transparent;
+      color: #000;
+      text-align: center;
+      padding: 1rem 0;
+      width: 100%;
+    }
+  </style>
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4Q6Gf2aSP4eDXB8Miphtr37CMZZQ5oXLH2yaXMJ2w8e2ZtHTl7GptT4jmndRuHDT" crossorigin="anonymous">
+  
+  <!-- Vue.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+  <script src="https://unpkg.com/vue-router@3/dist/vue-router.js"></script>
+</head>
+
+<body>
+  <div id="app">
+    <!-- Vue content injected here -->
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" integrity="sha384-j1CDi7MgGQ12Z7Qab0qlWQ/Qqz24Gc6BM0thvEMVjHnfYGF0rmFCozFSxQBxwHKO" crossorigin="anonymous"></script>
+  
+  <!-- Main Vue Script -->
+  <script type="module" src="../static/script.js"></script>
+</body>
+</html>
