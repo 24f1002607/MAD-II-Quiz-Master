@@ -1,4 +1,6 @@
 from .database import db #. refers to the current folder
+from flask import current_app
+from itsdangerous import URLSafeTimedSerializer
 from flask_security import UserMixin, RoleMixin
 from sqlalchemy import Enum
 from datetime import datetime, timezone
@@ -20,6 +22,8 @@ class User(db.Model, UserMixin):
     roles = db.relationship('Role', backref = 'users', secondary = 'users_roles')
     #One to many relationship with User_Quiz_Attempt
     quiz_attempts=db.relationship('User_Quiz_Attempt', back_populates='user', lazy=True)
+
+    
 
 class Role(db.Model, RoleMixin):
     __tablename__ = 'role'
