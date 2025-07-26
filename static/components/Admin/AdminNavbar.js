@@ -4,7 +4,7 @@ export default {
       <router-link class="navbar-brand" to="/admin_dashboard">Admin</router-link>
       <div class="collapse navbar-collapse">
         <ul class="navbar-nav mr-auto">
-          <li class="nav-item"><router-link class="nav-link" to="/admin_dashboard/subjects">Subjects</router-link></li>
+          <li class="nav-item"><router-link class="nav-link" to="/admin_dashboard/subjects">Quiz</router-link></li>
           <li class="nav-item"><router-link class="nav-link" to="/admin_dashboard/users">Users</router-link></li>
           <li class="nav-item"><router-link class="nav-link" to="/admin_dashboard/search">Search</router-link></li>
           <li class="nav-item"><router-link class="nav-link" to="/admin_dashboard/charts">Analytics</router-link></li>

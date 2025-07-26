@@ -41,6 +41,7 @@ const routes = [
     component: AdminDashboard,
     children: [
       { path: '', component: SubjectList },
+      { path: 'quiz', component: QuizList },// new route
       { path: 'add-subject', component: AddEditSubject },
       { path: 'edit-subject/:id', component: AddEditSubject },
       { path: 'subjects/:subjectId/chapters', component: ChapterList },

@@ -47,7 +47,7 @@ def register_admin_routes(app):
             db.session.commit()
             return jsonify({"message": "User unblocked"})
         return jsonify({"message": "User not found"}), 404
-
+#CRUD for subjects
     @app.route('/api/subject', methods=['GET', 'POST'])
     @app.route('/api/subject/<int:subject_id>', methods=['PUT', 'DELETE'])
     @auth_required("token")
@@ -98,7 +98,7 @@ def register_admin_routes(app):
             }
         })
 
-
+#Crud for Chapters
     @app.route('/api/chapter', methods=['GET', 'POST'])
     @app.route('/api/chapter/<int:chapter_id>', methods=['GET', 'PUT', 'DELETE'])
     @auth_required("token")
@@ -164,6 +164,7 @@ def register_admin_routes(app):
             db.session.commit()
             return jsonify({"message": "Chapter deleted"})
 
+#CRUD for Quizzes
     @app.route('/api/quiz', methods=['POST'])
     @app.route('/api/quiz/<int:quiz_id>', methods=['PUT', 'DELETE'])
     @auth_required("token")
