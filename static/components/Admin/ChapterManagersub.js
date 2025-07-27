@@ -3,18 +3,13 @@ export default {
   data() {
     return {
       chapters: [],
-      subjectId: this.$route.params.subjectId
     };
   },
   created() {
     console.log('Received subjectId:', this.subjectId); //optional debug log
     this.load();
   },
-  beforeRouteUpdate(to, from, next) {
-    this.subjectId = to.params.subjectId;
-    this.load();
-    next();
-  },
+  
   methods: {
     load() {
       fetch(`/api/chapter?subject_id=${this.subjectId}`, this.authOpts())
@@ -25,7 +20,7 @@ export default {
           return response.json();
         })
         .then(data => {
-          this.chapters = data;
+          this.chapters = data.chapters;
         })
         .catch(error => {
           console.error('Error loading chapters:', error);

@@ -1,8 +1,10 @@
 from flask import jsonify, request
 from flask_security import auth_required, roles_required
-from application.models import User, Subject, Chapter, Quiz, Questions
+from application.models import User, Subject, Chapter, Quiz, Questions, User_Quiz_Attempt, is_valid_duration
 from application.database import db
 from datetime import datetime
+from sqlalchemy import func
+
 
 def register_admin_routes(app):
 
@@ -14,9 +16,28 @@ def register_admin_routes(app):
         subjects = Subject.query.all()
         quizzes = Quiz.query.all()
         return jsonify({
-            "users": [{"id": u.id, "username": u.username, "email": u.email, "active": u.active, "roles": [r.name for r in u.roles]} for u in users],
-            "subjects": [{"subject_id": s.subject_id, "subject_name": s.subject_name, "level": s.level if s.level else None} for s in subjects],
-            "quizzes": [{"id": q.quiz_id, "title": q.quiz_title} for q in quizzes]
+            "users": [
+                {
+                    "id": u.id,
+                    "username": u.username,
+                    "email": u.email,
+                    "active": u.active,
+                    "roles": [r.name for r in u.roles]
+                } for u in users
+            ],
+            "subjects": [
+                {
+                    "subject_id": s.subject_id,
+                    "subject_name": s.subject_name,
+                    "level": s.level if s.level else None
+                } for s in subjects
+            ],
+            "quizzes": [
+                {
+                    "id": q.quiz_id,
+                    "title": q.quiz_title
+                } for q in quizzes
+            ]
         })
 
     @app.route('/api/logout', methods=['POST'])
@@ -47,7 +68,8 @@ def register_admin_routes(app):
             db.session.commit()
             return jsonify({"message": "User unblocked"})
         return jsonify({"message": "User not found"}), 404
-#CRUD for subjects
+
+    # CRUD for subjects including quiz_count in GET
     @app.route('/api/subject', methods=['GET', 'POST'])
     @app.route('/api/subject/<int:subject_id>', methods=['PUT', 'DELETE'])
     @auth_required("token")
@@ -55,18 +77,31 @@ def register_admin_routes(app):
     def subject_api(subject_id=None):
         if request.method == 'GET':
             subjects = Subject.query.all()
+            quiz_counts = (
+                db.session.query(Quiz.subject_id, func.count(Quiz.quiz_id).label("cnt"))
+                .group_by(Quiz.subject_id)
+                .all()
+            )
+            quiz_map = {sid: cnt for sid, cnt in quiz_counts}
             return jsonify({
                 "subjects": [
-                    {"subject_id": s.subject_id, "subject_name": s.subject_name, "level": s.level if s.level else None}
+                    {
+                        "subject_id": s.subject_id,
+                        "subject_name": s.subject_name,
+                        "level": s.level if s.level else None,
+                        "quiz_count": quiz_map.get(s.subject_id, 0)
+                    }
                     for s in subjects
                 ]
             })
+
         elif request.method == 'POST':
             data = request.json
             new_subject = Subject(subject_name=data['subject_name'], level=data['level'])
             db.session.add(new_subject)
             db.session.commit()
             return jsonify({"message": "Subject created"}), 201
+
         elif request.method == 'PUT':
             subject = Subject.query.get(subject_id)
             if subject:
@@ -76,6 +111,7 @@ def register_admin_routes(app):
                 db.session.commit()
                 return jsonify({"message": "Subject updated"})
             return jsonify({"message": "Subject not found"}), 404
+
         elif request.method == 'DELETE':
             subject = Subject.query.get(subject_id)
             if subject:
@@ -83,7 +119,7 @@ def register_admin_routes(app):
                 db.session.commit()
                 return jsonify({"message": "Subject deleted"})
             return jsonify({"message": "Subject not found"}), 404
-        
+
     @app.route('/api/subject/<int:subject_id>', methods=['GET'])
     @auth_required("token")
     @roles_required("admin")
@@ -98,7 +134,7 @@ def register_admin_routes(app):
             }
         })
 
-#Crud for Chapters
+    # CRUD for chapters
     @app.route('/api/chapter', methods=['GET', 'POST'])
     @app.route('/api/chapter/<int:chapter_id>', methods=['GET', 'PUT', 'DELETE'])
     @auth_required("token")
@@ -106,7 +142,6 @@ def register_admin_routes(app):
     def chapter_api(chapter_id=None):
         if request.method == 'GET':
             if chapter_id:
-                # Get a single chapter by ID
                 chapter = Chapter.query.get(chapter_id)
                 if not chapter:
                     return jsonify({"error": "Chapter not found"}), 404
@@ -119,19 +154,20 @@ def register_admin_routes(app):
                     }
                 })
 
-            # Otherwise, list all chapters for a given subject_id
             subject_id = request.args.get("subject_id")
             if not subject_id:
                 return jsonify({"error": "subject_id is required"}), 400
 
             chapters = Chapter.query.filter_by(subject_id=subject_id).all()
-            return jsonify([
-                {
-                    "chapter_id": c.chapter_id,
-                    "chapter_name": c.chapter_name,
-                    "chapter_description": c.chapter_description
-                } for c in chapters
-            ])
+            return jsonify({
+                "chapters": [
+                    {
+                        "chapter_id": c.chapter_id,
+                        "chapter_name": c.chapter_name,
+                        "chapter_description": c.chapter_description
+                    } for c in chapters
+                ]
+            })
 
         elif request.method == 'POST':
             data = request.json
@@ -148,7 +184,6 @@ def register_admin_routes(app):
             chapter = Chapter.query.get(chapter_id)
             if not chapter:
                 return jsonify({"error": "Chapter not found"}), 404
-
             data = request.json
             chapter.chapter_name = data.get("chapter_name", chapter.chapter_name)
             chapter.chapter_description = data.get("description", chapter.chapter_description)
@@ -159,91 +194,11 @@ def register_admin_routes(app):
             chapter = Chapter.query.get(chapter_id)
             if not chapter:
                 return jsonify({"error": "Chapter not found"}), 404
-
             db.session.delete(chapter)
             db.session.commit()
             return jsonify({"message": "Chapter deleted"})
 
-#CRUD for Quizzes
-    @app.route('/api/quiz', methods=['POST'])
-    @app.route('/api/quiz/<int:quiz_id>', methods=['PUT', 'DELETE'])
-    @auth_required("token")
-    @roles_required("admin")
-    def quiz_api(quiz_id=None):
-        if request.method == 'POST':
-            data = request.json
-            new_quiz = Quiz(
-                chapter_id=data['chapter_id'],
-                quiz_title=data['title'],
-                quiz_date=datetime.strptime(data['quiz_date'], "%Y-%m-%d"),
-                questions_count=data['questions_count'],
-                duration=data['duration'],
-                difficulty_level=data['difficulty'],
-                total_score=0
-            )
-            new_quiz.set_total_score()
-            db.session.add(new_quiz)
-            db.session.commit()
-            return jsonify({"message": "Quiz created"})
-        elif request.method == 'PUT':
-            quiz = Quiz.query.get(quiz_id)
-            if quiz:
-                data = request.json
-                quiz.quiz_title = data.get("title", quiz.quiz_title)
-                quiz.difficulty_level = data.get("difficulty", quiz.difficulty_level)
-                quiz.set_total_score()
-                db.session.commit()
-                return jsonify({"message": "Quiz updated"})
-            return jsonify({"message": "Quiz not found"}), 404
-        elif request.method == 'DELETE':
-            quiz = Quiz.query.get(quiz_id)
-            if quiz:
-                db.session.delete(quiz)
-                db.session.commit()
-                return jsonify({"message": "Quiz deleted"})
-            return jsonify({"message": "Quiz not found"}), 404
-
-    @app.route('/api/quiz/view/<int:quiz_id>', methods=['GET'])
-    @auth_required("token")
-    @roles_required("admin")
-    def view_edit_quiz(quiz_id):
-        quiz = Quiz.query.get(quiz_id)
-        if not quiz:
-            return jsonify({"message": "Quiz not found"}), 404
-        return jsonify({
-            "title": quiz.quiz_title,
-            "duration": quiz.duration,
-            "difficulty": quiz.difficulty_level,
-            "questions": [{"id": q.question_id, "text": q.question_text} for q in quiz.questions]
-        })
-
-    @app.route('/api/question', methods=['POST'])
-    @app.route('/api/question/<int:question_id>', methods=['PUT', 'DELETE'])
-    @auth_required("token")
-    @roles_required("admin")
-    def question_api(question_id=None):
-        if request.method == 'POST':
-            data = request.json
-            new_q = Questions(**data)
-            db.session.add(new_q)
-            db.session.commit()
-            return jsonify({"message": "Question created"})
-        elif request.method == 'PUT':
-            q = Questions.query.get(question_id)
-            if not q:
-                return jsonify({"message": "Question not found"}), 404
-            for key, val in request.json.items():
-                setattr(q, key, val)
-            db.session.commit()
-            return jsonify({"message": "Question updated"})
-        elif request.method == 'DELETE':
-            q = Questions.query.get(question_id)
-            if q:
-                db.session.delete(q)
-                db.session.commit()
-                return jsonify({"message": "Question deleted"})
-            return jsonify({"message": "Question not found"}), 404
-
+    # Search endpoint
     @app.route('/api/admin/search', methods=['GET'])
     @auth_required("token")
     @roles_required("admin")
@@ -257,3 +212,223 @@ def register_admin_routes(app):
             "subjects": [{"id": s.subject_id, "name": s.subject_name} for s in subjects],
             "quizzes": [{"id": quiz.quiz_id, "title": quiz.quiz_title} for quiz in quizzes]
         })
+
+    # List chapters for a subject
+    @app.route('/api/subject/<int:subject_id>/chapters', methods=['GET'])
+    @auth_required("token")
+    @roles_required("admin")
+    def list_chapters(subject_id):
+        chapters = Chapter.query.filter_by(subject_id=subject_id).all()
+        return jsonify({
+            "chapters": [
+                {
+                    "chapter_id": c.chapter_id,
+                    "chapter_name": c.chapter_name,
+                    "chapter_description": c.chapter_description
+                }
+                for c in chapters
+            ]
+        })
+
+    # List quizzes for a subject
+    @app.route('/api/subject/<int:subject_id>/quizzes', methods=['GET'])
+    @auth_required("token")
+    @roles_required("admin")
+    def list_quizzes(subject_id):
+        quizzes = Quiz.query.filter_by(subject_id=subject_id).all()
+        return jsonify({
+            "quizzes": [
+                {
+                    "quiz_id": q.quiz_id,
+                    "quiz_title": q.quiz_title,
+                    "questions_count": q.questions_count,
+                    "questions_added": len(q.questions),
+                    "difficulty_level": q.difficulty_level,
+                    "total_score": q.total_score,
+                    "duration": q.duration,
+                    # Defensive: If chapter or questions relationship missing
+                    #"max_questions": len(q.chapter.questions) if q.chapter and q.chapter.questions else 0
+                } for q in quizzes
+            ]
+        })
+    
+    # Quiz CRUD endpoints
+    @app.route('/api/quiz', methods=['POST'])
+    @app.route('/api/quiz/<int:quiz_id>', methods=['GET', 'PUT', 'DELETE'])
+    @auth_required("token")
+    @roles_required("admin")
+    def quiz_api(quiz_id=None):
+        if request.method == 'GET':
+            quiz = Quiz.query.get(quiz_id)
+            if not quiz:
+                return jsonify({"error": "Not found"}), 404
+            return jsonify({
+                "quiz_id": quiz.quiz_id,
+                "quiz_title": quiz.quiz_title,
+                "chapter_id": quiz.chapter_id,
+                "difficulty_level": quiz.difficulty_level,
+                "duration": quiz.duration,
+                "quiz_date": quiz.quiz_date.strftime("%Y-%m-%dT%H:%M"),
+                "questions_count": quiz.questions_count,
+                "total_score": quiz.total_score
+                
+            })
+
+        
+
+        if request.method == 'POST':
+            data = request.json or {}
+
+            duration = data.get('duration')
+            if not duration or not is_valid_duration(duration):
+                return jsonify({"error": "Invalid duration format"}), 400
+
+
+
+            chapter = Chapter.query.get(data.get('chapter_id'))
+            if not chapter:
+                return jsonify({"error": "Invalid chapter ID"}), 400
+
+            new_quiz = Quiz(
+                subject_id=data.get('subject_id'),
+                chapter_id=data.get('chapter_id'),
+                chapter_name=chapter.chapter_name,
+                quiz_title=data.get('title'),
+                quiz_date=datetime.fromisoformat(data.get('quiz_date')),
+                duration=data.get('duration'),
+                difficulty_level=data.get('difficulty'),
+                questions_count=data.get('questions_count', 0)
+            )
+            new_quiz.set_total_score()  # Assuming this method exists in your model
+            db.session.add(new_quiz)
+            db.session.commit()
+            return jsonify({"message": "Quiz created", "quiz_id": new_quiz.quiz_id}), 201
+
+        if request.method == 'PUT':
+            data = request.json or {}
+            quiz = Quiz.query.get(quiz_id)
+            if not quiz:
+                return jsonify({"error": "Quiz not found"}), 404
+
+            quiz.quiz_title = data.get('title', quiz.quiz_title)
+            quiz.duration = data.get('duration', quiz.duration)
+            quiz.difficulty_level = data.get('difficulty', quiz.difficulty_level)
+            quiz.questions_count = data.get('questions_count', quiz.questions_count)
+            quiz.set_total_score()
+            db.session.commit()
+            return jsonify({"message": "Quiz updated"})
+
+        if request.method == 'DELETE':
+            quiz = Quiz.query.get(quiz_id)
+            if not quiz:
+                return jsonify({"error": "Quiz not found"}), 404
+
+            db.session.delete(quiz)
+            db.session.commit()
+            return jsonify({"message": "Quiz deleted"})
+
+    # View quiz questions
+    @app.route('/api/quiz/view/<int:quiz_id>', methods=['GET'])
+    @auth_required("token")
+    @roles_required("admin")
+    def view_quiz(quiz_id):
+        quiz = Quiz.query.get(quiz_id)
+        if not quiz:
+            return jsonify({"error": "Not found"}), 404
+        return jsonify({
+            "quiz_id": quiz.quiz_id,
+            "quiz_title": quiz.quiz_title,
+            "duration": quiz.duration,
+            "difficulty": quiz.difficulty_level,
+            "questions_count": quiz.questions_count,
+            "total_score": quiz.total_score,
+            "chapter_id": quiz.chapter_id,
+            "questions": [
+                {
+                    "id": q.question_id,
+                    "text": q.question_text,
+                    "options": [q.option1, q.option2, q.option3, q.option4],
+                    "marks": q.marks
+                } for q in quiz.questions
+            ]
+        })
+
+    # Question CRUD
+    @app.route('/api/chapters', methods=['GET'])
+    @auth_required("token")
+    @roles_required("admin")
+    def get_all_chapters():
+        chapters = Chapter.query.all()
+        return jsonify({
+            "chapters": [
+                {
+                    "chapter_id": c.chapter_id,
+                    "title": c.chapter_name
+                } for c in chapters
+            ]
+        })
+
+    @app.route('/api/question', methods=['POST'])
+    @app.route('/api/question/<int:question_id>', methods=['GET', 'PUT', 'DELETE'])
+    @auth_required("token")
+    @roles_required("admin")
+    def question_api(question_id=None):
+        if request.method == 'GET':
+            question = Questions.query.get(question_id)
+            if not question:
+                return jsonify({"error": "Not found"}), 404
+            return jsonify({
+                "question_id": question.question_id,
+                "question_text": question.question_text,
+                "option1": question.option1,
+                "option2": question.option2,
+                "option3": question.option3,
+                "option4": question.option4,
+                "correct_answer": question.correct_answer,
+                "marks": question.marks
+            })
+
+        
+
+        if request.method == 'POST':
+            data = request.json or {}
+            new_question = Questions(
+                question_text=data.get('question_text'),
+                option1=data.get('option1'),
+                option2=data.get('option2'),
+                option3=data.get('option3'),
+                option4=data.get('option4'),
+                correct_answer=data.get('correct_answer'),
+                marks=data.get('marks'),
+                quiz_id=data.get('quiz_id'),
+                chapter_id=data.get('chapter_id')
+            )
+            db.session.add(new_question)
+            db.session.commit()
+            return jsonify({"message": "Question created", "question_id": new_question.question_id}), 201
+
+        if request.method == 'PUT':
+            data = request.json or {}
+            question = Questions.query.get(question_id)
+            if not question:
+                return jsonify({"error": "Not found"}), 404
+
+            question.question_text = data.get('question_text', question.question_text)
+            question.option1 = data.get('option1', question.option1)
+            question.option2 = data.get('option2', question.option2)
+            question.option3 = data.get('option3', question.option3)
+            question.option4 = data.get('option4', question.option4)
+            question.correct_answer = data.get('correct_answer', question.correct_answer)
+            question.marks = data.get('marks', question.marks)
+            question.chapter_id = data.get('chapter_id', question.chapter_id)
+            db.session.commit()
+            return jsonify({"message": "Question updated"})
+
+        if request.method == 'DELETE':
+            question = Questions.query.get(question_id)
+            if not question:
+                return jsonify({"error": "Not found"}), 404
+            db.session.delete(question)
+            db.session.commit()
+            return jsonify({"message": "Question deleted"})
+

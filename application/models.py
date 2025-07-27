@@ -3,9 +3,16 @@ from flask import current_app
 from itsdangerous import URLSafeTimedSerializer
 from flask_security import UserMixin, RoleMixin
 from sqlalchemy import Enum
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from sqlalchemy import CheckConstraint
 from sqlalchemy.ext.mutable import MutableDict
+import re
+
+def is_valid_duration(duration_str):
+        # Validates if duration matches HH:MM, where HH=0-99, MM=00-59
+        return bool(re.match(r'^\d{1,2}:[0-5]\d$', duration_str))
+
+
 
 class User(db.Model, UserMixin):
     __tablename__ = 'user'
@@ -94,6 +101,7 @@ class Quiz(db.Model):
         """Convert HH:MM format to total minutes"""
         hours, minutes = map(int, self.duration.split(':'))
         return hours * 60 + minutes  # Convert hours to minutes and add the minutes
+    
 
     def set_total_score(self):
         if self.difficulty_level == 'Easy':
@@ -102,6 +110,32 @@ class Quiz(db.Model):
             self.total_score = 30
         elif self.difficulty_level == 'Hard':
             self.total_score = 50
+
+    def is_expired(self):
+    #Return True if the quiz duration has passed since quiz_date.
+        if not self.quiz_date or not self.duration:
+            return False  # Defensive: no date/duration set
+
+        try:
+            # Convert HH:MM to total minutes
+            hours, minutes = map(int, self.duration.split(':'))
+            duration_delta = timedelta(hours=hours, minutes=minutes)
+
+            # Calculate quiz expiry time
+            expiry_time = self.quiz_date + duration_delta
+            return datetime.now(timezone.utc) > expiry_time
+
+        except Exception as e:
+            print(f"Error checking quiz expiry: {e}")
+            return False
+        
+    def time_left(self):
+        #Returns timedelta left before the quiz expires.
+        if not self.quiz_date or not self.duration:
+            return timedelta(0)
+        hours, minutes = map(int, self.duration.split(':'))
+        expiry_time = self.quiz_date + timedelta(hours=hours, minutes=minutes)
+        return max(timedelta(0), expiry_time - datetime.now(timezone.utc))
 
 #Fifth Entity
 class Questions(db.Model):
@@ -125,6 +159,7 @@ class Questions(db.Model):
     __table_arg__=(
     CheckConstraint('correct_answer IN (1, 2, 3, 4)', name='correct_answer_check'),
     )
+    
 
 #sixth entity
 class User_Quiz_Attempt(db.Model):
