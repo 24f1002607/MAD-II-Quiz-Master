@@ -155,7 +155,7 @@ class Questions(db.Model):
     quiz=db.relationship('Quiz', back_populates='questions')
 
     #Add a check constraint to the correct_answer column
-    __table_arg__=(
+    __table_args__=(
     CheckConstraint('correct_answer IN (1, 2, 3, 4)', name='correct_answer_check'),
     )
     
@@ -166,14 +166,15 @@ class User_Quiz_Attempt(db.Model):
     attempt_id = db.Column(db.Integer, primary_key=True, autoincrement=True) # Primary Key for User Quiz Attempt table
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # User ID
     quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.quiz_id'), nullable=False) # Quiz ID
-    score=db.Column(db.Integer, nullable=False)
+    score=db.Column(db.Integer, nullable=False, default=0)
     is_active=db.Column(db.Boolean, default=True) #Indicates if the attempt is active or "hidden"
     attempt_date=db.Column(db.DateTime, nullable=False)
     
     attempt_time=db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc)) #Timestamp when the quiz attempt started
-    completed_at=db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc)) #Timestamp when the quiz attempt was completed
+    completed_at=db.Column(db.DateTime, nullable=True) #Timestamp when the quiz attempt was completed
     
     time_taken= db.Column(db.Integer, nullable=True) #Time taken to complete the quiz in minutes
+    exceeded_time = db.Column(db.Boolean, default=False)
     selected_answers =db.Column(MutableDict.as_mutable(db.JSON), nullable=False, default=dict) #Store answers as json
 
     #Relationships with User and Quiz
@@ -184,12 +185,12 @@ class User_Quiz_Attempt(db.Model):
         return f'<User_Quiz_Attempt {self.attempt_id}>'
   
 
-    def calculate_score(self, correct_answers):
+    def calculate_score(self, selected_answers):
         score = 0
         for question in self.quiz.questions:
-            if question.correct_answer == correct_answers[question.question_id]:
+            if question.correct_answer == selected_answers.get((str(question.question_id))):
                 score += question.marks
-                return score
+        return score
                 
     def check_time_limit(self):
         """Check if the user has exceeded the quiz's time limit"""
@@ -207,7 +208,6 @@ class User_Quiz_Attempt(db.Model):
         # If the time taken exceeds the duration, calculate the exceeded time
         if time_taken_in_mins > total_duration_in_mins:
             self.exceeded_time = time_taken_in_mins - total_duration_in_mins  # Store how much time exceeded
-            self.save()  # Save the exceeded time in the database
             return False  # Indicate that time was exceeded
         return True  # Time within the limi
         

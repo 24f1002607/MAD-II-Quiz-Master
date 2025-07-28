@@ -84,23 +84,7 @@ export default {
       }
     },
     startQuiz(quizId) {
-      fetch(`/api/quiz/start/${quizId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authentication-Token': localStorage.getItem('token')
-        }
-      })
-        .then(res => {
-          if (!res.ok) throw new Error('Failed to start quiz');
-          return res.json();
-        })
-        .then(data => {
-          alert(`Quiz started! Attempt ID: ${data.attempt_id}`);
-        })
-        .catch(err => {
-          alert(`Error: ${err.message}`);
-        });
+      this.$router.push({ path: `/user_dashboard/quiz/${quizId}/attempt` });
     }
   },
   template: `

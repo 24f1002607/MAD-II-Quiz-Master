@@ -26,6 +26,7 @@ export default {
           return res.json();
         })
         .then(data => {
+          console.log('quiz metadata', data);
           this.quiz = data;
           return fetch(`/api/quiz/view/${this.quizId}`, this.authOpts());
         })
@@ -40,7 +41,7 @@ export default {
           }
         })
         .catch(err => {
-          console.error(err);
+          console.error('LoadQuiz error', err);
           this.error = err.message;
         })
         .finally(() => {

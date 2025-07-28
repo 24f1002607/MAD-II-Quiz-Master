@@ -29,6 +29,7 @@ import ViewQuizUser from './components/User/ViewQuizUser.js';
 import QuizListUser from './components/User/QuizList.js';
 import QuizAttempt from './components/User/QuizAttempt.js';
 import QuizScores from './components/User/QuizScores.js';
+import QuizScoresHistory from './components/User/QuizScoresHistory.js';
 
 // Define routes
 const routes = [
@@ -67,7 +68,7 @@ const routes = [
       },
 
       { path: 'quiz/edit/:quizId', component: EditQuizForm, props: true },
-      { path: 'quizzes/:quizId/view', component: ViewQuizUser, props: true },
+      { path: 'quiz/:quizId/view', component: ViewQuiz, props: true },
       { path: 'quizzes/:quizId/questions/:questionId/edit', component: EditQuestion, props: true },
       { path: 'users', component: UsersList }
     ]
@@ -80,8 +81,9 @@ const routes = [
       { path: '', component: SubjectListUser },
       { path: 'quizzes/:quizId/view', component: ViewQuizUser, props: true },
       { path: 'chapters/:chapterId/quizzes', component: QuizListUser },
-      { path: 'quizzes/:quizId/attempt', component: QuizAttempt },
-      { path: 'scores', component: QuizScores }
+      { path: 'quiz/:quizId/attempt', component: QuizAttempt, props: true },
+      { path: 'scores', component: QuizScoresHistory },
+      { path: 'quiz_result/:attemptId', component: QuizScores, props: true }
     ]
   }
 ];

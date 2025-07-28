@@ -2,7 +2,7 @@ from flask import jsonify, request
 from flask_security import auth_required, roles_required, current_user
 from application.models import *
 from application.database import db
-from datetime import datetime
+from datetime import datetime, timezone
 
 def register_user_routes(app):
 
@@ -106,7 +106,7 @@ def register_user_routes(app):
 
 
     #Route for Viewing Quiz
-    @app.route('/api/quiz/view/<int:quiz_id>', methods=['GET'])
+    @app.route('/api/user/quiz/view/<int:quiz_id>', methods=['GET'])
     @auth_required("token")
     @roles_required("user")
     def view_quiz_details(quiz_id):
@@ -116,20 +116,35 @@ def register_user_routes(app):
 
         subject = Subject.query.get(quiz.subject_id)
         chapter = Chapter.query.get(quiz.chapter_id)
+        questions = Questions.query.filter_by(quiz_id=quiz_id).all()
 
         return jsonify({
-            "quiz_id": quiz.quiz_id,
-            "quiz_title": quiz.quiz_title,
-            "questions_count": quiz.questions_count,
-            "difficulty": quiz.difficulty_level,
-            "duration": quiz.duration,
-            "total_score": quiz.total_score,
-            "quiz_date": quiz.quiz_date.isoformat() if quiz.quiz_date else None,
-            "subject": subject.subject_name if subject else "Unknown",
-            "chapter": chapter.chapter_name if chapter else "Unknown"
+            "quiz": {
+                "quiz_id": quiz.quiz_id,
+                "quiz_title": quiz.quiz_title,
+                "questions_count": quiz.questions_count,
+                "difficulty": quiz.difficulty_level,
+                "duration": quiz.duration,
+                "total_score": quiz.total_score,
+                "quiz_date": quiz.quiz_date.isoformat() if quiz.quiz_date else None,
+                "subject": subject.subject_name if subject else "Unknown",
+                "chapter": chapter.chapter_name if chapter else "Unknown"
+            },
+            "questions": [
+                {
+                    "question_id": q.question_id,  # 
+                    "question_text": q.question_text,
+                    "option1": q.option1,
+                    "option2": q.option2,
+                    "option3": q.option3,
+                    "option4": q.option4,
+                    "marks": q.marks
+                }
+                for q in questions
+            ]
         })
 
-
+    
     
     @app.route('/api/quiz/start/<int:quiz_id>', methods=['POST'])
     @auth_required("token")
@@ -137,6 +152,8 @@ def register_user_routes(app):
     def start_quiz(quiz_id):
         attempt = User_Quiz_Attempt(
             user_id=current_user.id,
+            score = 0,
+            is_active = True,
             quiz_id=quiz_id,
             attempt_date=datetime.utcnow(),
             selected_answers={}
@@ -147,34 +164,133 @@ def register_user_routes(app):
             "message": "Quiz started",
             "attempt_id": attempt.attempt_id
         })
+    
+    @app.route('/api/quiz/full/<int:quiz_id>', methods=['GET'])
+    @auth_required("token")
+    @roles_required("user")
+    def get_full_quiz(quiz_id):
+        quiz = Quiz.query.get(quiz_id)
+        if not quiz:
+            return jsonify({"error": "Quiz not found"}), 404
 
+        questions = [{
+            "question_id": q.question_id,
+            "question_text": q.question_text,
+            "options": [{"option_id": o.option_id, "option_text": o.option_text} for o in q.options]
+        } for q in quiz.questions]
+
+        return jsonify({
+            "quiz_id": quiz.quiz_id,
+            "quiz_title": quiz.quiz_title,
+            "duration": quiz.duration,
+            "difficulty": quiz.difficulty_level,
+            "questions": questions
+        })
+
+    
+    #Submit quiz
     @app.route('/api/quiz/submit/<int:attempt_id>', methods=['POST'])
     @auth_required("token")
     @roles_required("user")
     def submit_quiz(attempt_id):
-        data = request.json
+        data = request.get_json()
+        answers = data.get('answers', {})
+
         attempt = User_Quiz_Attempt.query.get(attempt_id)
         if not attempt or attempt.user_id != current_user.id:
-            return jsonify({"message": "Not allowed"}), 403
+            return jsonify({"error": "Not authorized"}), 403
 
-        attempt.completed_at = datetime.utcnow()
-        attempt.selected_answers = data.get("answers", {})
-        attempt.score = attempt.calculate_score(attempt.selected_answers)
+        # Ensure aware datetime
+        if attempt.attempt_time.tzinfo is None:
+            attempt.attempt_time = attempt.attempt_time.replace(tzinfo=timezone.utc)
+
+        attempt.completed_at = datetime.now(timezone.utc)
+        attempt.check_time_limit()
+
+        # Calculate score, store answers
+        total_score = 0
+        quiz = Quiz.query.get(attempt.quiz_id)
+        for question in quiz.questions:
+            qid_str = str(question.question_id)
+            selected = answers.get(qid_str)
+            if selected is not None:
+                if int(selected) == question.correct_answer:
+                    total_score += question.marks
+
+        attempt.score = total_score
+        attempt.selected_answers = answers
         db.session.commit()
-        return jsonify({
-            "message": "Quiz submitted",
-            "score": attempt.score
-        })
 
-    @app.route('/api/quiz/results', methods=['GET'])
+        return jsonify({"message": "Submitted successfully", "score": total_score})
+
+
+
+
+
+
+    @app.route('/api/quiz/results/<int:attempt_id>', methods=['GET'])
     @auth_required("token")
     @roles_required("user")
-    def view_results():
-        attempts = User_Quiz_Attempt.query.filter_by(user_id=current_user.id).all()
-        return jsonify([
-            {
+    def get_quiz_result(attempt_id):
+        attempt = User_Quiz_Attempt.query.get(attempt_id)
+        if not attempt or attempt.user_id != current_user.id:
+            return jsonify({"error": "Not allowed"}), 403
+
+        quiz = attempt.quiz
+        results = []
+        for q in quiz.questions:
+            user_answer = attempt.selected_answers.get(str(q.question_id))
+            correct = q.correct_answer
+            marks = q.marks if user_answer == correct else 0
+            results.append({
+                "question_text": q.question_text,
+                "your_answer": user_answer,
+                "correct_answer": correct,
+                "marks_awarded": marks,
+                "options": {
+                    "1": q.option1,
+                    "2": q.option2,
+                    "3": q.option3,
+                    "4": q.option4
+                }  
+            })
+
+        return jsonify({
+            "quiz_title": quiz.quiz_title,
+            "subject": quiz.subject.subject_name,
+            "username": current_user.username,
+            "score": attempt.score,
+            "total_score": quiz.total_score,
+            "time_taken": attempt.time_taken,
+            "details": results
+        })
+
+    
+    @app.route('/api/quiz/results/history', methods=['GET'])
+    @auth_required("token")
+    @roles_required("user")
+    def history_quiz_results():
+        attempts = User_Quiz_Attempt.query.filter(
+            User_Quiz_Attempt.user_id == current_user.id,
+            User_Quiz_Attempt.completed_at.isnot(None)
+        ).all()
+
+        history = []
+        for a in attempts:
+            exceeded = False
+            if a.quiz.get_duration_in_minutes() is not None:
+                exceeded = (a.time_taken or 0) > a.quiz.get_duration_in_minutes()
+            history.append({
+                "subject": a.quiz.subject.subject_name,
                 "quiz_id": a.quiz_id,
+                "attempt_id": a.attempt_id,
+                "date_taken": a.attempt_date.isoformat() if a.attempt_date else None,
+                "difficulty": a.quiz.difficulty_level,
+                "duration": a.quiz.duration,
+                "time_taken": round(a.time_taken,2) if a.time_taken else None,
+                "exceeded": exceeded,
                 "score": a.score,
-                "attempt_date": a.attempt_date.isoformat()
-            } for a in attempts
-        ])
+                "total_score": a.quiz.total_score
+            })
+        return jsonify(history)
+

@@ -347,6 +347,7 @@ def register_admin_routes(app):
                     "id": q.question_id,
                     "text": q.question_text,
                     "options": [q.option1, q.option2, q.option3, q.option4],
+                    "correct_answer": q.correct_answer,
                     "marks": q.marks
                 } for q in quiz.questions
             ]
