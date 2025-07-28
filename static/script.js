@@ -24,8 +24,8 @@ import UsersList from './components/Admin/UserManager.js';
 // User
 import UserDashboard from './components/User/UserDashboard.js';
 import UserNavbar from './components/User/UserNavbar.js';
-import SubjectListUser from './components/User/SubjectList.js';
-import ChapterListUser from './components/User/ChapterList.js';
+import SubjectListUser from './components/User/SubjectListUser.js';
+import ViewQuizUser from './components/User/ViewQuizUser.js';
 import QuizListUser from './components/User/QuizList.js';
 import QuizAttempt from './components/User/QuizAttempt.js';
 import QuizScores from './components/User/QuizScores.js';
@@ -67,7 +67,7 @@ const routes = [
       },
 
       { path: 'quiz/edit/:quizId', component: EditQuizForm, props: true },
-      { path: 'quiz/:quizId/view', component: ViewQuiz, props: true },
+      { path: 'quizzes/:quizId/view', component: ViewQuizUser, props: true },
       { path: 'quizzes/:quizId/questions/:questionId/edit', component: EditQuestion, props: true },
       { path: 'users', component: UsersList }
     ]
@@ -78,7 +78,7 @@ const routes = [
     component: UserDashboard,
     children: [
       { path: '', component: SubjectListUser },
-      { path: 'subjects/:subjectId/chapters', component: ChapterListUser },
+      { path: 'quizzes/:quizId/view', component: ViewQuizUser, props: true },
       { path: 'chapters/:chapterId/quizzes', component: QuizListUser },
       { path: 'quizzes/:quizId/attempt', component: QuizAttempt },
       { path: 'scores', component: QuizScores }

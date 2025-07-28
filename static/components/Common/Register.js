@@ -26,7 +26,7 @@ export default {
           <label for="qualification" class="form-label">Qualification</label>
           <select v-model="formData.qualification" id="qualification" class="form-select" required>
             <option disabled value="">Select your qualification</option>
-            <option>Admin</option>
+            <option disabled>Admin</option>
             <option>Foundation</option>
             <option>Diploma Data Science</option>
             <option>Diploma Programming</option>
@@ -57,6 +57,12 @@ export default {
   methods: {
     async addUser() {
       this.message = "";
+
+      //Adding a check 
+      if (this.formData.qualification === 'Admin') {
+        this.message = "Admin registration is not allowed.";
+        return;
+      }
 
       try {
         const response = await fetch('/api/register', {

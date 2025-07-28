@@ -79,7 +79,6 @@ class Quiz(db.Model):
     __tablename__ = "quiz"
     quiz_id= db.Column(db.Integer, primary_key=True, autoincrement=True) # Primary Key for Quiz table
     chapter_id = db.Column(db.Integer, db.ForeignKey('chapter.chapter_id'), nullable=False) # Chapter ID
-    chapter_name = db.Column(db.String(120), nullable=False)
     quiz_title=db.Column(db.String(120), nullable=False)
     subject_id = db.Column(db.Integer, db.ForeignKey('subject.subject_id'), nullable=False) # Subject ID
     quiz_date= db.Column(db.DateTime, nullable=False) # Date when the quiz will be created

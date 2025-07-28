@@ -292,7 +292,6 @@ def register_admin_routes(app):
             new_quiz = Quiz(
                 subject_id=data.get('subject_id'),
                 chapter_id=data.get('chapter_id'),
-                chapter_name=chapter.chapter_name,
                 quiz_title=data.get('title'),
                 quiz_date=datetime.fromisoformat(data.get('quiz_date')),
                 duration=data.get('duration'),

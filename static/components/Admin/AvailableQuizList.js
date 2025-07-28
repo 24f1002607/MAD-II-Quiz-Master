@@ -10,7 +10,7 @@ export default {
     this.load();
   },
   watch: {
-    subjectId: {
+    '$route':{
       immediate: true,
       handler() {
         this.load();

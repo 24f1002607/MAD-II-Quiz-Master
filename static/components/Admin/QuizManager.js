@@ -12,10 +12,12 @@ export default {
         quiz_date: '',
         // keep duration string for backend, but split to hours/minutes for input
         duration: '',
-        questions_count: 0
+        questions_count: 0,
+        
       },
       durationHours: 0,
-      durationMinutes: 0
+      durationMinutes: 0,
+      quizRefreshKey: 0
     };
   },
   created() {
@@ -106,8 +108,17 @@ export default {
         .then(() => {
           this.loadSubjects(); // refresh quiz counts after creating quiz
           this.showCreateFormFor = null;
+          //Directly call onQuizCreated here
+          this.onQuizCreated(this.selectedSubject);
         })
         .catch(err => alert(err.message));
+    },
+    onQuizCreated(subjectId) {
+      if (this.$route.fullPath === `/admin_dashboard/quiz/${subjectId}/quizzes`) {
+        this.quizRefreshKey++;
+      } else {
+        this.$router.push(`/admin_dashboard/quiz/${subjectId}/quizzes`);
+      }
     }
   },
   template: `
@@ -202,7 +213,7 @@ export default {
       </div>
 
       <!-- This is required to render child routes (AvailableQuizList) -->
-      <router-view></router-view>
+      <router-view :key="quizRefreshKey"></router-view>
     </div>
   `
 };
