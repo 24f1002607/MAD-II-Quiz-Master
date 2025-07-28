@@ -294,3 +294,38 @@ def register_user_routes(app):
             })
         return jsonify(history)
 
+# User graphs
+    @app.route('/api/user/subject_scores', methods=['GET'])
+    @auth_required("token")
+    @roles_required("user")
+    def subject_scores():
+        user_id = current_user.id
+        attempts = User_Quiz_Attempt.query.filter_by(user_id=user_id).all()
+
+        subject_data = {}
+
+        for attempt in attempts:
+            if not attempt.completed_at:
+                continue
+            subject_name = attempt.quiz.subject.subject_name
+            if subject_name not in subject_data:
+                subject_data[subject_name] = {
+                    "total_score": 0,
+                    "count": 0
+                }
+            subject_data[subject_name]["total_score"] += attempt.score
+            subject_data[subject_name]["count"] += 1
+
+        result = []
+        for subject, data in subject_data.items():
+            avg = data["total_score"] / data["count"]
+            result.append({
+                "subject": subject,
+                "average_score": round(avg, 2),
+                "attempts": data["count"]   # Add attempts count here
+            })
+
+        return jsonify(result)
+
+
+

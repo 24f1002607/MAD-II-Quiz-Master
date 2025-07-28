@@ -30,6 +30,7 @@ import QuizListUser from './components/User/QuizList.js';
 import QuizAttempt from './components/User/QuizAttempt.js';
 import QuizScores from './components/User/QuizScores.js';
 import QuizScoresHistory from './components/User/QuizScoresHistory.js';
+import UserCharts from './components/User/UserCharts.js';
 
 // Define routes
 const routes = [
@@ -83,7 +84,8 @@ const routes = [
       { path: 'chapters/:chapterId/quizzes', component: QuizListUser },
       { path: 'quiz/:quizId/attempt', component: QuizAttempt, props: true },
       { path: 'scores', component: QuizScoresHistory },
-      { path: 'quiz_result/:attemptId', component: QuizScores, props: true }
+      { path: 'quiz_result/:attemptId', component: QuizScores, props: true },
+      { path: 'charts', component: UserCharts }
     ]
   }
 ];

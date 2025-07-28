@@ -1,14 +1,17 @@
 export default {
   template: `
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
       <router-link class="navbar-brand" to="/user_dashboard">Quiz Whiz</router-link>
       <div class="collapse navbar-collapse">
-        <ul class="navbar-nav me-auto">
+        <ul class="navbar-nav mr-auto">
           <li class="nav-item">
             <router-link class="nav-link" to="/user_dashboard">Home</router-link>
           </li>
           <li class="nav-item">
             <router-link class="nav-link" to="/user_dashboard/scores">My Scores</router-link>
+          </li>
+          <li class="nav-item">
+            <router-link class="nav-link" to="/user_dashboard/charts">Charts</router-link>
           </li>
         </ul>
         <button class="btn btn-outline-secondary" @click="logout">Logout</button>
