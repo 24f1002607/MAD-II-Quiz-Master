@@ -204,15 +204,64 @@ def register_admin_routes(app):
     @roles_required("admin")
     def admin_search():
         q = request.args.get("q", "")
-        users = User.query.filter(User.username.contains(q)).all()
-        subjects = Subject.query.filter(Subject.subject_name.contains(q)).all()
-        quizzes = Quiz.query.filter(Quiz.quiz_title.contains(q)).all()
-        return jsonify({
-            "users": [{"id": u.id, "username": u.username} for u in users],
-            "subjects": [{"id": s.subject_id, "name": s.subject_name} for s in subjects],
-            "quizzes": [{"id": quiz.quiz_id, "title": quiz.quiz_title} for quiz in quizzes]
-        })
+        search_type = request.args.get("type", "")
 
+        results = {
+            "users": [],
+            "quizzes": [],
+            "subjects": []
+        }
+
+        if search_type == "user":
+            users = User.query.filter(User.username.contains(q)).all()
+            for u in users:
+                # Only include completed attempts
+                completed_attempts = [
+                    {
+                        "quiz_title": attempt.quiz.quiz_title,
+                        "subject": attempt.quiz.subject.subject_name if attempt.quiz.subject else "N/A",
+                        "score": attempt.score,
+                        "attempt_date": attempt.attempt_date.strftime('%Y-%m-%d')
+                    }
+                    for attempt in u.quiz_attempts
+                    if attempt.completed_at is not None
+                ]
+
+                results["users"].append({
+                    "id": u.id,
+                    "username": u.username,
+                    "email": u.email,
+                    "qualification": u.qualification,
+                    "attempts": completed_attempts
+                })
+
+        elif search_type == "quiz":
+            quizzes = Quiz.query.filter(Quiz.quiz_title.contains(q)).all()
+            for quiz in quizzes:
+                results["quizzes"].append({
+                    "id": quiz.quiz_id,
+                    "title": quiz.quiz_title,
+                    "difficulty": quiz.difficulty_level,
+                    "total_score": quiz.total_score,
+                    "question_count": quiz.questions_count
+                })
+
+        elif search_type == "subject":
+            subjects = Subject.query.filter(Subject.subject_name.contains(q)).all()
+            for subject in subjects:
+                results["subjects"].append({
+                    "id": subject.subject_id,
+                    "name": subject.subject_name,
+                    "level": subject.level,
+                    "created_at": subject.created_at.isoformat(),
+                    "chapters": [ch.chapter_name for ch in subject.chapters],
+                    "quiz_count": len(subject.quizzes)
+                })
+
+        return jsonify(results)
+
+
+    
     # List chapters for a subject
     @app.route('/api/subject/<int:subject_id>/chapters', methods=['GET'])
     @auth_required("token")
@@ -431,4 +480,49 @@ def register_admin_routes(app):
             db.session.delete(question)
             db.session.commit()
             return jsonify({"message": "Question deleted"})
+        
+
+#Admin charts
+
+    @app.route('/api/admin/analytics', methods=['GET'])
+    @auth_required("token")
+    @roles_required("admin")
+    def admin_charts():
+        # 1 User-wise Top scores by percentage
+        users = User.query.all()
+        top_scores = []
+        for u in users:
+            # Calculate best percentage among completed attempts
+            completed = [a for a in u.quiz_attempts if a.completed_at is not None]
+            if not completed:
+                continue
+            best = max(completed, key=lambda a: a.score)
+            percent = (best.score / best.quiz.total_score) * 100 if best.quiz.total_score else 0
+            top_scores.append({
+                "username": u.username,
+                "percentage": round(percent, 2)
+            })
+        top_scores.sort(key=lambda x: x["percentage"], reverse=True)
+
+        # 2 Users registered by Level
+        level_counts = db.session.query(User.qualification, func.count(User.id)).group_by(User.qualification).all()
+        level_data = [{"level": lvl or "Unknown", "count": cnt} for lvl, cnt in level_counts]
+
+        # 3 Subject-wise quiz attempts count
+        subj_counts = db.session.query(
+            Subject.subject_name,
+            func.count(User_Quiz_Attempt.attempt_id)
+        ).join(Quiz, Quiz.subject_id == Subject.subject_id
+        ).join(User_Quiz_Attempt, User_Quiz_Attempt.quiz_id == Quiz.quiz_id
+        ).filter(User_Quiz_Attempt.completed_at.isnot(None)
+        ).group_by(Subject.subject_name).all()
+        subj_data = [{"subject": name, "attempt_count": cnt} for name, cnt in subj_counts]
+
+        return jsonify({
+            "top_scores": top_scores,
+            "by_level": level_data,
+            "by_subject": subj_data
+        })
+
+
 

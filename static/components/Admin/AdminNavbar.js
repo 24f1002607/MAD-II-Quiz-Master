@@ -7,7 +7,7 @@ export default {
           <li class="nav-item"><router-link class="nav-link" to="/admin_dashboard/quiz">Quiz</router-link></li>
           <li class="nav-item"><router-link class="nav-link" to="/admin_dashboard/users">Users</router-link></li>
           <li class="nav-item"><router-link class="nav-link" to="/admin_dashboard/search">Search</router-link></li>
-          <li class="nav-item"><router-link class="nav-link" to="/admin_dashboard/charts">Analytics</router-link></li>
+          <li class="nav-item"><router-link class="nav-link" to="/admin_dashboard/analytics">Analytics</router-link></li>
         </ul>
         <button class="btn btn-outline-light" @click="logout">Logout</button>
       </div>

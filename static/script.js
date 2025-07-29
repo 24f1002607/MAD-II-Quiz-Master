@@ -20,6 +20,9 @@ import EditQuizForm from './components/Admin/EditQuizForm.js';
 import ViewQuiz from './components/Admin/ViewQuiz.js';
 import EditQuestion from './components/Admin/EditQuestion.js';
 import UsersList from './components/Admin/UserManager.js';
+import AdminCharts from './components/Admin/AdminCharts.js';
+import AdminSearch from './components/Admin/AdminSearch.js';
+
 
 // User
 import UserDashboard from './components/User/UserDashboard.js';
@@ -71,7 +74,10 @@ const routes = [
       { path: 'quiz/edit/:quizId', component: EditQuizForm, props: true },
       { path: 'quiz/:quizId/view', component: ViewQuiz, props: true },
       { path: 'quizzes/:quizId/questions/:questionId/edit', component: EditQuestion, props: true },
-      { path: 'users', component: UsersList }
+      { path: 'users', component: UsersList },
+      { path: 'analytics', component: AdminCharts },
+      { path: 'search', component: AdminSearch },
+
     ]
   },
 

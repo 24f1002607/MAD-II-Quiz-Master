@@ -22,6 +22,10 @@ export default {
             {{ loading ? 'Logging in...' : 'Login' }}
           </button>
         </div>
+
+        <div class="mt-3 text-center">
+          <button class="btn btn-link text-decoration-none" @click="$router.push('/')">← Back to Home</button>
+        </div>
       </div>
     </div>
   `,
