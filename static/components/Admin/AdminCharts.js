@@ -1,41 +1,38 @@
 export default {
   name: 'AdminCharts',
   template: `
-  <div class="container mt-4">
-    <h2 class="text-center mb-4">Admin Analytics</h2>
+    <div class="container mt-4">
+      <h2 class="text-center mb-4">Admin Analytics</h2>
 
-    <div class="admin-chart-grid">
-      <div class="chart-box">
-        <h5>Top Scores (%)</h5>
-        <div class="chart-container">
-          <canvas id="topScoresChart"></canvas>
+      <div class="admin-chart-grid">
+        <div class="chart-box">
+          <h5>Top Scores (%)</h5>
+          <div class="chart-container">
+            <canvas id="topScoresChart"></canvas>
+          </div>
         </div>
-      </div>
 
-      <div class="chart-box">
-        <h5>Students by Level</h5>
-        <div class="chart-container">
-          <canvas id="byLevelChart"></canvas>
+        <div class="chart-box">
+          <h5>Students by Level</h5>
+          <div class="chart-container">
+            <canvas id="byLevelChart"></canvas>
+          </div>
         </div>
-      </div>
 
-      <div class="chart-box">
-        <h5>Attempts by Subject</h5>
-        <div class="chart-container">
-          <canvas id="bySubjectChart"></canvas>
+        <div class="chart-box">
+          <h5>Attempts by Subject</h5>
+          <div class="chart-container">
+            <canvas id="bySubjectChart"></canvas>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-`,
-
-
-
-
+  `,
 
   mounted() {
     this.fetchChartData();
   },
+
   methods: {
     async fetchChartData() {
       const res = await fetch('/api/admin/analytics', {
@@ -67,9 +64,14 @@ export default {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            yAxes: [{
-              ticks: { beginAtZero: true, max: 100 }
-            }]
+            y: {
+              beginAtZero: true,
+              max: 100,
+              title: {
+                display: true,
+                text: 'Percentage'
+              }
+            }
           }
         }
       });
@@ -96,18 +98,18 @@ export default {
                 label: function (context) {
                   const label = context.label || '';
                   const value = context.raw;
-                  const percentage = ((value / total) * 100).toFixed(0); // integer
+                  const percentage = ((value / total) * 100).toFixed(0);
                   return `${label}: ${percentage}% (${value})`;
                 }
               }
             },
-            datalabels:{
+            datalabels: {
               color: '#fff',
               font: {
                 weight: 'bold'
               },
               formatter: (value, context) => {
-                const percentage = ((value / total)*100).toFixed(0);
+                const percentage = ((value / total) * 100).toFixed(0);
                 return `${percentage}%`;
               }
             }
@@ -133,9 +135,13 @@ export default {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            yAxes: [{
-              ticks: { beginAtZero: true }
-            }]
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Attempts'
+              }
+            }
           }
         }
       });

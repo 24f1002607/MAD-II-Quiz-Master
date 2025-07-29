@@ -4,6 +4,7 @@ from application.models import User, Subject, Chapter, Quiz, Questions, User_Qui
 from application.database import db
 from datetime import datetime
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 
 
 def register_admin_routes(app):
@@ -12,18 +13,39 @@ def register_admin_routes(app):
     @auth_required("token")
     @roles_required("admin")
     def admin_dashboard():
-        users = User.query.all()
+        users = User.query.options(
+            joinedload(User.quiz_attempts)
+            .joinedload(User_Quiz_Attempt.quiz)
+            .joinedload(Quiz.subject)
+        ).all()
         subjects = Subject.query.all()
         quizzes = Quiz.query.all()
+
         return jsonify({
             "users": [
                 {
                     "id": u.id,
                     "username": u.username,
                     "email": u.email,
+                    "qualification": u.qualification,
                     "active": u.active,
-                    "roles": [r.name for r in u.roles]
-                } for u in users
+                    "roles": [r.name for r in u.roles],
+                    "quiz_attempts": [
+                        {
+                            "subject": a.quiz.subject.subject_name if a.quiz and a.quiz.subject else "N/A",
+                            "quiz_id": a.quiz_id,
+                            "attempt_id": a.attempt_id,
+                            "attempt_date": a.attempt_date.isoformat() if a.attempt_date else None,
+                            "completed_at": a.completed_at.isoformat() if a.completed_at else None,
+                            "difficulty_level": a.quiz.difficulty_level if a.quiz else "Unknown",
+                            "score": a.score
+                        }
+                        for a in u.quiz_attempts
+                        if a.completed_at is not None
+                    ]
+                }
+                for u in users
+                if "admin" not in [r.name for r in u.roles]
             ],
             "subjects": [
                 {
@@ -40,6 +62,9 @@ def register_admin_routes(app):
             ]
         })
 
+
+
+    
     @app.route('/api/logout', methods=['POST'])
     @auth_required("token")
     def admin_logout():

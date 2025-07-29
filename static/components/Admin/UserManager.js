@@ -74,7 +74,7 @@ export default {
                       <td>{{ attempt.quiz_id }}</td>
                       <td>{{ attempt.attempt_id }}</td>
                       <td>{{ new Date(attempt.attempt_date).toLocaleString() }}</td>
-                      <td>{{ attempt.difficulty }}</td>
+                      <td>{{ attempt.difficulty_level }}</td>
                       <td>{{ attempt.score }}</td>
                     </tr>
                     <tr v-if="user.quiz_attempts.filter(a => a.completed_at).length === 0">
