@@ -4,7 +4,7 @@ from itsdangerous import URLSafeTimedSerializer
 from flask_security import UserMixin, RoleMixin
 from sqlalchemy import Enum
 from datetime import datetime, timezone, timedelta
-from sqlalchemy import CheckConstraint
+from sqlalchemy import CheckConstraint, Time
 from sqlalchemy.ext.mutable import MutableDict
 import re
 
@@ -24,6 +24,10 @@ class User(db.Model, UserMixin):
     fs_uniquifier = db.Column(db.String, unique=True, nullable=False)
     active = db.Column(db.Boolean, default=True) # Approval status
     qualification = db.Column(Enum("Admin", "Foundation", "Diploma Data Science", "Diploma Programming", "Degree BSc", "Degree BS" )) 
+    
+    # New fields:
+    last_login = db.Column(db.DateTime(timezone=True), nullable=True)
+    reminder_time = db.Column(Time, nullable=True)  # User’s preferred reminder time (e.g. 18:00:00)
     
     #Many to many relationship
     roles = db.relationship('Role', backref = 'users', secondary = 'users_roles')
@@ -207,9 +211,11 @@ class User_Quiz_Attempt(db.Model):
 
         # If the time taken exceeds the duration, calculate the exceeded time
         if time_taken_in_mins > total_duration_in_mins:
-            self.exceeded_time = time_taken_in_mins - total_duration_in_mins  # Store how much time exceeded
+            self.exceeded_time = True  # Store how much time exceeded
             return False  # Indicate that time was exceeded
-        return True  # Time within the limi
+        
+        self.exceeded_time = False
+        return True
         
 
 

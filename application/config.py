@@ -15,3 +15,7 @@ class LocalDevelopmentConfig(Config):
     SECURITY_TOKEN_AUTHENTICATION_HEADER = 'Authentication-Token' 
     SECURITY_TOKEN_AUTHENTICATION_KEY = 'token'
     SECURITY_UNAUTHORIZED_VIEW = None
+
+    #config for celery
+    CELERY_BROKER_URL = 'redis://localhost:6379/0'
+    CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'

@@ -3,6 +3,7 @@ from flask_security import login_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from application.database import db
 from uuid import uuid4
+from datetime import datetime, timezone
 
 def register_auth_routes(app):
     @app.route('/', methods=['GET'])
@@ -21,13 +22,18 @@ def register_auth_routes(app):
         user = app.security.datastore.find_user(email=email)
         if user and check_password_hash(user.password, password):
             login_user(user)
+
+            user.last_login = datetime.now(timezone.utc)
+            db.session.commit()
+
             roles = [r.name for r in user.roles] if user.roles else []
             return jsonify({
                 "id": user.id,
                 "username": user.username,
                 "auth_token": user.get_auth_token(),
                 "qualification": user.qualification,
-                "roles": roles
+                "roles": roles,
+                "last_login": user.last_login.isoformat()
             })
         return jsonify({"message": "Invalid credentials"}), 400
 

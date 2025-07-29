@@ -548,6 +548,6 @@ def register_admin_routes(app):
             "by_level": level_data,
             "by_subject": subj_data
         })
+    
 
-
-
+    

@@ -326,6 +326,36 @@ def register_user_routes(app):
             })
 
         return jsonify(result)
+    
+
+    @app.route('/api/user/reminder_time', methods=['GET', 'POST'])
+    @auth_required("token")
+    def reminder_time():
+        if request.method == 'GET':
+            rt = current_user.reminder_time.isoformat() if current_user.reminder_time else None
+            return jsonify({"reminder_time": rt}), 200
+
+        if request.method == 'POST':
+            data = request.get_json()
+            reminder_str = data.get('reminder_time')
+            if not reminder_str:
+                return jsonify({"message": "reminder_time is required"}), 400
+
+            # parse datetime string here, e.g. ISO 8601
+            from dateutil.parser import parse
+            try:
+                reminder_dt = parse(reminder_str).time() #extract the time only
+            except Exception:
+                return jsonify({"message": "Invalid datetime format"}), 400
+
+            current_user.reminder_time = reminder_dt
+            db.session.commit()
+            return jsonify({"message": "Reminder time updated", "reminder_time": reminder_dt.isoformat()}), 200
+
+
+
+
+
 
 
 
